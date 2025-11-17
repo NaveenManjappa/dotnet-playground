@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-//Configure the rate limiter service
+//Configure the rate limiter service -- Fixed window rate limiter
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -19,6 +19,21 @@ builder.Services.AddRateLimiter(options =>
         options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         options.QueueLimit = 0;//do not queue requests, reject immediately
 
+    });
+
+});
+
+//Sliding window rate limiter
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddSlidingWindowLimiter(policyName: "sliding", options =>
+    {
+        options.PermitLimit = 5;//allow 5 requests
+        options.Window = TimeSpan.FromSeconds(15);//per 30seconds
+        options.SegmentsPerWindow = 3;//split into 3 segments 5s each
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
     });
 
 });
