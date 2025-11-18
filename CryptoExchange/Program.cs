@@ -12,6 +12,25 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        //check if limiter rule has retry after
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            //add the standard header
+            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+
+            //write a friendly message optional
+            await context.HttpContext.Response.WriteAsync(
+                $"Too many requests. Please try again later in {retryAfter.TotalSeconds}");
+        }
+        else
+        {
+            await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later", token);
+        }
+    };
+
     options.AddFixedWindowLimiter(policyName: "fixed", options =>
     {
         options.PermitLimit = 5;//allow only 5 requests
