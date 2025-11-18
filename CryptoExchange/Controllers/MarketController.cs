@@ -6,7 +6,7 @@ namespace CryptoExchange.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [EnableRateLimiting("fixed")]
+    [EnableRateLimiting("tiered_policy")]
     public class MarketController : ControllerBase
     {
         [HttpGet("price/{ticker}")]

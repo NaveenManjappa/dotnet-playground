@@ -7,11 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-//Configure the rate limiter service -- Fixed window rate limiter
+//Token bucket rate limiter
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    //create a policy named fixed
+
     options.AddFixedWindowLimiter(policyName: "fixed", options =>
     {
         options.PermitLimit = 5;//allow only 5 requests
@@ -21,27 +21,15 @@ builder.Services.AddRateLimiter(options =>
 
     });
 
-});
-
-//Sliding window rate limiter
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddSlidingWindowLimiter(policyName: "sliding", options =>
     {
         options.PermitLimit = 5;//allow 5 requests
-        options.Window = TimeSpan.FromSeconds(15);//per 30seconds
+        options.Window = TimeSpan.FromSeconds(15);//per 15seconds
         options.SegmentsPerWindow = 3;//split into 3 segments 5s each
         options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         options.QueueLimit = 0;
     });
 
-});
-
-//Token bucket rate limiter
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddTokenBucketLimiter(policyName: "token_bucket", options =>
     {
         options.TokenLimit = 10; // Bucket size: max 10 tokens allowed in the bucket
@@ -49,6 +37,30 @@ builder.Services.AddRateLimiter(options =>
         options.TokensPerPeriod = 2; //How many tokens we add each period
         options.QueueProcessingOrder= QueueProcessingOrder.OldestFirst;
         options.QueueLimit = 0;
+    });
+
+    options.AddPolicy("tiered_policy", httpContext =>
+    {
+        var tier = httpContext.Request.Query["tier"].ToString();
+        bool isGold = tier.Equals("gold", StringComparison.OrdinalIgnoreCase);
+
+        if (isGold)
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(partitionKey: "gold_member", factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromSeconds(10)
+            });
+        }
+        else
+        {
+            var userIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown_ip";
+            return RateLimitPartition.GetFixedWindowLimiter(partitionKey: userIp, factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromSeconds(10)
+            });
+        }
     });
 });
 
