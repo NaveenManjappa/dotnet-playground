@@ -38,6 +38,21 @@ builder.Services.AddRateLimiter(options =>
 
 });
 
+//Token bucket rate limiter
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddTokenBucketLimiter(policyName: "token_bucket", options =>
+    {
+        options.TokenLimit = 10; // Bucket size: max 10 tokens allowed in the bucket
+        options.ReplenishmentPeriod = TimeSpan.FromSeconds(10); //How often we add tokens
+        options.TokensPerPeriod = 2; //How many tokens we add each period
+        options.QueueProcessingOrder= QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+});
+
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
