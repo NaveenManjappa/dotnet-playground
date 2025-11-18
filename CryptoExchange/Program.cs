@@ -62,6 +62,13 @@ builder.Services.AddRateLimiter(options =>
             });
         }
     });
+
+    options.AddConcurrencyLimiter(policyName: "concurrency_policy", options =>
+    {
+        options.PermitLimit = 2;//Only 2 requests can be processed at the exact same time
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 2;//Allow 2 requests to wait in line. The 5th gets rejected immediately.
+    });
 });
 
 

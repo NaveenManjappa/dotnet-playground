@@ -13,7 +13,16 @@ namespace CryptoExchange.Controllers
         public IActionResult GetPrice(string ticker)
         {
             var price = Random.Shared.Next(20000, 70000);
-            return Ok(new { Ticker = ticker.ToUpper(), Price = price ,TimeStamp=DateTime.UtcNow});
+            return Ok(new { Ticker = ticker.ToUpper(), Price = price, TimeStamp = DateTime.UtcNow });
+        }
+
+
+        [HttpGet("heavy-report")]
+        [EnableRateLimiting("concurrency_policy")]
+        public async Task<IActionResult> GetHeavyReport()
+        {
+            await Task.Delay(3000);
+            return Ok(new { Message = "Report generated", TimeStamp = DateTime.UtcNow });
         }
     }
 }
